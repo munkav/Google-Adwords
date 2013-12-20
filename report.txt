@@ -1,0 +1,73 @@
+STEPS Taken to Develop the code :
+
+
+1. I divided the problem  into the following parts
+
+a) Creating tables (Advertisers, Keywords, queries) with data using sqlldr
+Advertiser table keeps 6 columns of balance and 6 columns of displayCount . 1 pair each for one algorithm. Initally all the balances are set to initial budget and all the displaycounts are set to 0.
+b) Calculating no of keywords for each advertiser and storing it in a table AdvertiserKeywordsCount. (used in cosine similarity)
+c) Calling the procedure processAds from java. In this procedure I do  the processing required for  the all queries for all the 6 algorithms.
+d) Within a loop, I take  a query from the Query table, tokenize it and store it in the queryTokens table.
+e) After this I Create data such as cosine similarity, adrank , bid for each query according to the advertisers that match  and store it in the table queryData. Then I update queryData table with balance. and displaycount of advertiser for all of the algorithms (all this is done in createData procedure). 
+To calculate all this the following steps are used :
+
+	I)First take a join between Advertisers, keywords and Tokens and store the result  in a table MatchedAdvertisers. These are the advertisers that have matching keywords with the query. I also store the CTC and budget of the advertiser here.
+	II) Then I calculate the total bid for each advertiser by taking a join between Advertisers, Keywords and distinct Tokens. Distinct token is important here as we want to count each bid for a 		keyword only once.
+	III) Calculate the numerator of the cosine similarity and store it in  Querytokencnt table.
+	IV)  Then the queryData is created by taking a join between MatchedAdvertisers, Querytokencnt, AdvertiserKeywordsCount and Advertisers table. All the needed data is put in the queryData.
+	Balance and Displaycount for six algo's is stored in this table.
+
+	Description of queryData is as below
+
+	CREATE TABLE QueryData
+	(AdvertiserId int, qId int, HitsCount int, KeywordCount int, QueryCount int,
+	 Similarity float, CTC float, QualityScore float, SumBid float, budget float,
+	 balanceG float, balanceG2 float, balanceB float, balanceB2 float, balanceP float,
+	 balanceP2 float, displayedCountG int, displayedCountG2 int, displayedCountB int,
+	 displayedCountB2 int, displayedCountP int, displayedCountP2 int, RankG float,
+	 RankG2 float, RankB float, RankB2 float, RankP float, RankP2 float
+	 );
+
+	After this the similarity and Quality score is calculated for the query and advertiser pair.
+	Rank's for all the six algorithm are also updated here.
+
+e) After this I select the top k ads for a query for each algorithm and store it in implicit cursors;
+Then i loop through each cursor and deduct balance for each advertiser depending on the alogrithm. Each advertiser is also placed in respective output tables in this procedure.
+
+
+
+
+Problems faced:
+
+My initial approach was to create tokens for all the queries at the beginning and then do a join with the advertisers and keywords table .This would create a master table with the corresponding advertisers for all the queries. Now I needed to pick the top K advertisers for each query depending on the algorithm and update thier balance. 
+
+This approach had two problems 
+1. Tokenizing all the queries together was taking a long time.
+2. I had to update the balance of the advertiser at many places after calculating bid for one query. 
+This was also taking a long time.
+
+
+To solve these problems, I changed my strategy and am now processing once query at a time.
+
+Also first i was calling a Procedure from java for each query. This also was taking a lot of time, so I decided to use one procedure call and take a loop inside the procedure call.
+
+
+
+
+
+Things Learned Conceptually:
+
+1. This project taught me about how google actually selects advertisers for a query.
+2. Why second price algorithm is better.
+
+In terms of technical knowledge,
+1. I learnt to write procedures in SQL.
+2. Load tables using sqlldr.
+3. Do calculations using SQL.
+4. use of Cursors.
+5. Why it is necessary to keep join operations at a minimum as it is a very expensive (time taking operation)
+6. It is necessary to keep the procedure calls from java to minimum. This also slows the query processing a lot.
+7. Hierarchical query model
+
+
+
